@@ -149,13 +149,8 @@ class build_clib(_build_clib):
             log.info("Using system library")
             return
 
-        build_temp = tempfile.TemporaryDirectory().name
-
-        try:
-            os.makedirs(build_temp)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
+        # Ensure library has been downloaded (sdist might have been skipped)
+        download_library(self)
 
         if not os.path.exists(absolute("libsecp256k1/configure")):
             # configure script hasn't been generated yet
@@ -205,14 +200,15 @@ class build_clib(_build_clib):
                 "--enable-module-extrakeys",
             ])
 
-        log.debug("Running configure: {}".format(" ".join(cmd)))
-        subprocess.check_call(
-            cmd,
-            cwd=build_temp,
-        )
+        with tempfile.TemporaryDirectory() as build_temp:
+            log.debug("Running configure: {}".format(" ".join(cmd)))
+            subprocess.check_call(
+                cmd,
+                cwd=build_temp,
+            )
 
-        subprocess.check_call(["make"], cwd=build_temp)
-        subprocess.check_call(["make", "install"], cwd=build_temp)
+            subprocess.check_call(["make"], cwd=build_temp)
+            subprocess.check_call(["make", "install"], cwd=build_temp)
 
         self.build_flags['include_dirs'].extend(build_flags('libsecp256k1', 'I', self.build_clib))
         self.build_flags['library_dirs'].extend(build_flags('libsecp256k1', 'L', self.build_clib))
