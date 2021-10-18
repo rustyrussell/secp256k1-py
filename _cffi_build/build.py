@@ -86,9 +86,8 @@ if ffi is None:
     # Library is not installed - use bundled one
     print("Using bundled libsecp256k1")
 
-    # By default we only build with recovery enabled since the other modules
-    # are experimental
-    if os.environ.get('SECP_BUNDLED_EXPERIMENTAL'):
+    # We usually build all the experimental bits, since they're useful.
+    if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
         ffi = _mk_ffi(_base + list(_modules.values()), libraries=['secp256k1'])
     else:
         ffi = _mk_ffi(_base + [_modules['recovery']], libraries=['secp256k1'])

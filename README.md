@@ -26,33 +26,10 @@ pip install --no-binary :all: secp256k1
 If you either can't or don't want to use the binary package options described
 above read on to learn what is needed to install the source pacakge.
 
-There are two modes of installation depending on whether you already have
-libsecp256k1 installed on your system:
-
-
-###### Using a system installed libsecp256k1
-
-If the library is already installed it should usually be automatically detected
-and used.
-However if libsecp256k1 is installed in a non standard location you can use the
-environment variables `INCLUDE_DIR` and `LIB_DIR` to point the way:
-
-```
-INCLUDE_DIR=/opt/somewhere/include LIB_DIR=/opt/somewhere/lib pip install --no-binary :all: secp256k1
-```
-
-
-###### Using the bundled libsecp256k1
-
-If on the other hand you don't have libsecp256k1 installed on your system, a
-bundled version will be built and used. In this case only the `recovery` module
-will be enabled since it's the only one not currently considered as
-"experimental" by the library authors. This can be overridden by setting the
-`SECP_BUNDLED_EXPERIMENTAL` environment variable:
-
-```
-SECP_BUNDLED_EXPERIMENTAL=1 pip install --no-binary :all: secp256k1
-```
+The library bundles its own libsecp256k1 currently, as there is no
+versioning to allow us to safely determine compatibility with an
+installed library, especially as we also build all the experimental
+modules.
 
 For the bundled version to compile successfully you need to have a C compiler
 as well as the development headers for `libffi` and `libgmp` installed.
@@ -64,7 +41,6 @@ On Debian / Ubuntu for example the necessary packages are:
 * `pkg-config`
 * `libtool`
 * `libffi-dev`
-* `libgmp-dev`
 
 On OS X the necessary homebrew packages are:
 
@@ -72,7 +48,6 @@ On OS X the necessary homebrew packages are:
 * `pkg-config`
 * `libtool`
 * `libffi`
-* `gmp`
 
 
 ## Command line usage
@@ -171,20 +146,16 @@ The returned object is a structure from the C lib. If you want to store it (on a
 - `ecdsa_sign_recoverable(msg, raw=False, digest=hashlib.sha256)` -> internal object<br/>
 create a recoverable ECDSA signature. See `ecdsa_sign` for parameters description.
 
-> NOTE: `ecdsa_sign_recoverable` can only be used if the `secp256k1` C library is compiled with support for it. If there is no support, an Exception will be raised when calling it.
+- `schnorr_sign(msg, bip340tag, raw=False)` -> bytes<br/>
 
-- `schnorr_sign(msg, raw=False, digest=hashlib.sha256)` -> bytes<br/>
-create a signature using a custom EC-Schnorr-SHA256 construction. It
-produces non-malleable 64-byte signatures which support public key recovery
-batch validation, and multiparty signing. `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.
+create a BIP-340 signature for `msg`; `bip340tag` should be a string
+or byte value which distinguishes this usage from any other usage of
+signatures (e.g. your program name, or full protocol name).  If `raw`
+is specified, then `bip340tag` is not used, and the `msg` (usually
+a 32-byte hash) is signed directly.
 
-- `schnorr_generate_nonce_pair(msg, raw=False, digest=hashlib.sha256)` -> (internal object, internal object)<br/>
-generate a nonce pair deterministically for use with `schnorr_partial_sign`. `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.
-
-- `schnorr_partial_sign(msg, privnonce, pubnonce_others, raw=False, digest=hashlib.sha256)` -> bytes<br/>
-produce a partial Schnorr signature, which can be combined using `schnorr_partial_combine` to end up with a full signature that is verifiable using `PublicKey.schnorr_verify`. `privnonce` is the second item in the tuple returned by `schnorr_generate_nonce_pair`, `pubnonce_others` represent the combined public nonces excluding the one associated to this `privnonce`. `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.<br/><br/>
-To combine pubnonces, use `PublicKey.combine`.<br/><br/>
-Do not pass the pubnonce produced for the respective privnonce; combine the pubnonces from other signers and pass that instead.
+It produces non-malleable 64-byte signatures which support batch
+validation.
 
 
 #### class `secp256k1.PublicKey(pubkey, raw, flags)`
@@ -219,13 +190,11 @@ tweak the current public key by multiplying it by a 32 byte scalar and return a 
 - `ecdsa_verify(msg, raw_sig, raw=False, digest=hashlib.sha256)` -> bool<br/>
 verify an ECDSA signature and return True if the signature is correct, False otherwise. `raw_sig` is expected to be an object returned from `ecdsa_sign` (or if it was serialized using `ecdsa_serialize`, then first run it through `ecdsa_deserialize`). `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.
 
-- `schnorr_verify(msg, schnorr_sig, raw=False, digest=hashlib.sha256)` -> bool<br/>
-verify a Schnorr signature and return True if the signature is correct, False otherwise. `schnorr_sig` is expected to be the result from either `schnorr_partial_combine` or `schnorr_sign`. `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.
+- `schnorr_verify(msg, schnorr_sig, bip340tag, raw=False)` -> bool<br/>
+verify a Schnorr signature and return True if the signature is correct, False otherwise. `schnorr_sig` is expected to be the result from `schnorr_sign`, `msg`, `bip340tag` and `raw` must match those used in `schnorr_sign`.
 
-- `ecdh(scalar)` -> bytes<br/>
-compute an EC Diffie-Hellman secret in constant time. The instance `public_key` is used as the public point, and the `scalar` specified must be composed of 32 bytes. It outputs 32 bytes representing the ECDH secret computed. If the `scalar` is invalid, an Exception is raised.
-
-> NOTE: `ecdh` can only be used if the `secp256k1` C library is compiled with support for it. If there is no support, an Exception will be raised when calling it.
+- `ecdh(scalar, hashfn=ffi.NULL, hasharg=ffi.NULL)` -> bytes<br/>
+compute an EC Diffie-Hellman secret in constant time. The instance `public_key` is used as the public point, and the `scalar` specified must be composed of 32 bytes. It outputs 32 bytes representing the ECDH secret computed. The hashing function can be overridden, but (unlike libsecp256k1 itself) we insist that it produce 32-bytes of output. If the `scalar` is invalid, an Exception is raised.
 
 
 #### class `secp256k1.ECDSA`
@@ -262,23 +231,6 @@ convert the result from `ecdsa_recoverable_serialize` back to an internal object
 
 - `ecdsa_recoverable_convert(recover_sig)` -> internal object<br/>
 convert a recoverable signature to a normal signature, i.e. one that can be used by `ecdsa_serialize` and related methods.
-
-> NOTE: `ecdsa_recover*` can only be used if the `secp256k1` C library is compiled with support for it. If there is no support, an Exception will be raised when calling any of them.
-
-
-#### class `secp256k1.Schnorr`
-
-The `Schnorr` class is intended to be used as a mix in. Its methods can be accessed from any `secp256k1.PrivateKey` or `secp256k1.PublicKey` instances.
-
-##### Methods
-
-- `schnorr_recover(msg, schnorr_sig, raw=False, digest=hashlib.sha256)` -> internal object<br/>
-recover and return a public key from a Schnorr signature. `schnorr_sig` is expected to be the result from `schnorr_partial_combine` or `schnorr_sign`. `msg`, `raw`, and `digest` are used as described in `ecdsa_sign`.
-
-- `schnorr_partial_combine(schnorr_sigs)` -> bytes<br/>
-combine multiple Schnorr partial signatures. `raw_sigs` is expected to be a list (or similar iterable) of signatures resulting from `PrivateKey.schnorr_partial_sign`. If the signatures cannot be combined, an Exception is raised.
-
-> NOTE: `schnorr_*` can only be used if the `secp256k1` C library is compiled with support for it. If there is no support, an Exception will be raised when calling any of them.
 
 
 #### Constants
@@ -364,22 +316,15 @@ The bundling of libsecp256k1 is handled by the various setup.py build phases:
   `LIB_TARBALL_URL` to point to a newer commit.
 
 - During 'install':
-  If an existing (system) installation of libsecp256k1 is found
-  (either in the default library locations or in the location pointed
-  to by the environment variable `LIB_DIR`) it is used as before.
-
-  Due to the way the way cffi modules are implemented it is necessary
-  to perform this detection in the cffi build module
+  To support (future) use of system libsecp256k1, and because of the
+  way the way cffi modules are implemented it is necessary
+  to perform system library detection in the cffi build module
   `_cffi_build/build.py` as well as in `setup.py`. For that reason
   some utility functions have been moved into a `setup_support.py`
   module which is imported from both.
 
-  If however no existing installation can be found the bundled
-  source code is used to build a library locally that will be
-  statically linked into the CFFI extension.
+  By default, the bundled source code is used to build a library
+  locally that will be statically linked into the CFFI extension.
 
-  By default only the `recovery` module will be enabled in this bundled
-  version as it is the only one not considered to be 'experimental' by
-  the libsecp256k1 authors. It is possible to override this and enable
-  all modules by setting the environment variable
-  `SECP_BUNDLED_EXPERIMENTAL`.
+  You can set the environment variable `SECP_BUNDLED_NO_EXPERIMENTAL`
+  to disable all experimental modules except the `recovery` module.

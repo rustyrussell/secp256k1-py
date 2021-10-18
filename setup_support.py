@@ -90,8 +90,17 @@ def _find_lib():
 _has_system_lib = None
 
 
+# This is currently disabled, for two reasons.
+# 1. It's a bad idea to have a library which sometimes has functionality
+#    and sometimes doesn't.  e.g. if you rely on Schnorr, what are you
+#    supposed to do if the local Python of secp256k1 doesn't support it?
+#    Complain to the user?  What are *they* supposed to do?  What's the
+#    point of a package installable by pip in that case?
+# 2. Until v1.0 of libsecp256k1 is released, there is no version information.
+#    Since the API can change for experimental features in arbitrary ways,
+#    this makes it really difficult to know that it's compatible.
 def has_system_lib():
     global _has_system_lib
     if _has_system_lib is None:
         _has_system_lib = _find_lib()
-    return _has_system_lib
+    return False
