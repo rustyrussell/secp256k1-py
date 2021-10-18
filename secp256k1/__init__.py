@@ -39,7 +39,6 @@ class Base(object):
             self._destroy(self.ctx)
             self.ctx = None
 
-
     def bip340_tag(self, msg, raw, tag):
         if raw:
             return msg
@@ -117,7 +116,8 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
 
         return (bool(result), sigout if sigout != ffi.NULL else None)
 
-    def ecdsa_recover(self, msg, recover_sig, raw=False, digest=hashlib.sha256):
+    def ecdsa_recover(self, msg, recover_sig, raw=False,
+                      digest=hashlib.sha256):
         if not HAS_RECOVERABLE:
             raise Exception("secp256k1_recovery not enabled")
         if self.flags & ALL_FLAGS != ALL_FLAGS:
@@ -195,7 +195,10 @@ class PublicKey(Base, ECDSA):
     def _pubkey_changed(self):
         if HAS_EXTRAKEYS:
             self.xonly_pubkey = ffi.new('secp256k1_xonly_pubkey *')
-            assert lib.secp256k1_xonly_pubkey_from_pubkey(self.ctx, self.xonly_pubkey, ffi.NULL, self.public_key) == 1
+            assert lib.secp256k1_xonly_pubkey_from_pubkey(self.ctx,
+                                                          self.xonly_pubkey,
+                                                          ffi.NULL,
+                                                          self.public_key) == 1
 
     def serialize(self, compressed=True):
         assert self.public_key, "No public key defined"
@@ -279,7 +282,8 @@ class PublicKey(Base, ECDSA):
         msg_to_sign = self.bip340_tag(msg, raw, bip340tag)
 
         verified = lib.secp256k1_schnorrsig_verify(
-            self.ctx, schnorr_sig, msg_to_sign, len(msg_to_sign), self.xonly_pubkey)
+            self.ctx, schnorr_sig, msg_to_sign, len(msg_to_sign),
+            self.xonly_pubkey)
 
         return bool(verified)
 
@@ -325,7 +329,9 @@ class PrivateKey(Base, ECDSA):
             public_key, raw=False, ctx=self.ctx, flags=self.flags)
         if HAS_EXTRAKEYS:
             self.keypair = ffi.new('secp256k1_keypair *')
-            if lib.secp256k1_keypair_create(self.ctx, self.keypair, self.private_key) != 1:
+            if lib.secp256k1_keypair_create(self.ctx,
+                                            self.keypair,
+                                            self.private_key) != 1:
                 raise Exception("invalid private key (can't make keypair?)")
 
     def set_raw_privkey(self, privkey):
@@ -368,7 +374,8 @@ class PrivateKey(Base, ECDSA):
         """
         return _tweak_private(self, lib.secp256k1_ec_privkey_tweak_mul, scalar)
 
-    def ecdsa_sign(self, msg, raw=False, digest=hashlib.sha256, custom_nonce=None):
+    def ecdsa_sign(self, msg, raw=False, digest=hashlib.sha256,
+                   custom_nonce=None):
         msg32 = _hash32(msg, raw, digest)
         raw_sig = ffi.new('secp256k1_ecdsa_signature *')
         nonce_fn = ffi.NULL
@@ -454,7 +461,8 @@ def _tweak_private(inst, func, scalar):
     return bytes(ffi.buffer(key, 32))
 
 
-def _main_cli(args, out, encoding='utf-8'):
+# Apparently flake8 thinks this is "too complex".  Maybe FIXME?
+def _main_cli(args, out, encoding='utf-8'):  # noqa: C901
     import binascii
 
     def show_public(public_key):
@@ -494,7 +502,7 @@ def _main_cli(args, out, encoding='utf-8'):
         try:
             sig_raw = pub.ecdsa_deserialize(sig)
             good = pub.ecdsa_verify(args.message, sig_raw)
-        except:
+        except:  # noqa: E722
             good = False
         out.write(u"{}\n".format(good))
         return 0 if good else 1
@@ -502,7 +510,8 @@ def _main_cli(args, out, encoding='utf-8'):
     elif args.action == 'signrec':
         priv, sig = sign('ecdsa_sign_recoverable', args)
         sig, recid = priv.ecdsa_recoverable_serialize(sig)
-        out.write(u"{} {}\n".format(binascii.hexlify(sig).decode(encoding), recid))
+        out.write(u"{} {}\n".format(binascii.hexlify(sig).decode(encoding),
+                                    recid))
         if args.show_pubkey:
             show_public(priv.pubkey)
 
@@ -522,6 +531,7 @@ def _parse_cli():
 
     py2 = sys.version_info.major == 2
     enc = sys.getfilesystemencoding()
+
     def bytes_input(s):
         return s if py2 else s.encode(enc)
 

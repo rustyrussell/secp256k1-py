@@ -12,7 +12,10 @@ from distutils.errors import DistutilsError
 from io import BytesIO
 import sys
 
-from setuptools import Distribution as _Distribution, setup, find_packages, __version__ as setuptools_version
+from setuptools import (Distribution as _Distribution,
+                        setup,
+                        find_packages,
+                        __version__ as setuptools_version)
 from setuptools.command.develop import develop as _develop
 from setuptools.command.egg_info import egg_info as _egg_info
 from setuptools.command.sdist import sdist as _sdist
@@ -30,19 +33,22 @@ except ImportError:
 
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from setup_support import absolute, build_flags, has_system_lib
+from setup_support import absolute, build_flags, has_system_lib  # noqa: E402
 
 
 # Version of libsecp256k1 to download if none exists in the `libsecp256k1`
 # directory
-LIB_TARBALL_URL = "https://github.com/bitcoin-core/secp256k1/archive/9526874d1406a13193743c605ba64358d55a8785.tar.gz"
+LIB_TARBALL_URL = ("https://github.com/bitcoin-core/secp256k1/archive/"
+                   "9526874d1406a13193743c605ba64358d55a8785"
+                   ".tar.gz")
 
 
 # We require setuptools >= 3.3
 if [int(i) for i in setuptools_version.split('.')] < [3, 3]:
     raise SystemExit(
         "Your setuptools version ({}) is too old to correctly install this "
-        "package. Please upgrade to a newer version (>= 3.3).".format(setuptools_version)
+        "package. Please upgrade to a newer version (>= 3.3)."
+        .format(setuptools_version)
     )
 
 # Ensure pkg-config is available
@@ -63,7 +69,8 @@ def download_library(command):
         # Library already downloaded
         return
     if not os.path.exists(libdir):
-        command.announce("downloading libsecp256k1 source code", level=log.INFO)
+        command.announce("downloading libsecp256k1 source code",
+                         level=log.INFO)
         try:
             r = urlopen(LIB_TARBALL_URL)
             if r.getcode() == 200:
@@ -142,7 +149,8 @@ class build_clib(_build_clib):
         raise Exception("check_library_list")
 
     def get_library_names(self):
-        return build_flags('libsecp256k1', 'l', os.path.abspath(self.build_clib))
+        return build_flags('libsecp256k1', 'l',
+                           os.path.abspath(self.build_clib))
 
     def run(self):
         if has_system_lib():
@@ -174,7 +182,7 @@ class build_clib(_build_clib):
             try:
                 os.chmod(absolute(filename), 0o755)
             except OSError as e:
-                # some of these files might not exist depending on autoconf version
+                # some of files might not exist depending on autoconf version
                 if e.errno != errno.ENOENT:
                     # If the error isn't "No such file or directory" something
                     # else is wrong and we want to know about it
@@ -210,8 +218,12 @@ class build_clib(_build_clib):
             subprocess.check_call(["make"], cwd=build_temp)
             subprocess.check_call(["make", "install"], cwd=build_temp)
 
-        self.build_flags['include_dirs'].extend(build_flags('libsecp256k1', 'I', self.build_clib))
-        self.build_flags['library_dirs'].extend(build_flags('libsecp256k1', 'L', self.build_clib))
+        self.build_flags['include_dirs'].extend(build_flags('libsecp256k1',
+                                                            'I',
+                                                            self.build_clib))
+        self.build_flags['library_dirs'].extend(build_flags('libsecp256k1',
+                                                            'L',
+                                                            self.build_clib))
         if not has_system_lib():
             self.build_flags['define'].append(('CFFI_ENABLE_RECOVERY', None))
         else:
@@ -262,7 +274,9 @@ setup(
     install_requires=['cffi>=1.3.0'],
     tests_require=['pytest==2.8.7'],
 
-    packages=find_packages(exclude=('_cffi_build', '_cffi_build.*', 'libsecp256k1')),
+    packages=find_packages(exclude=('_cffi_build',
+                                    '_cffi_build.*',
+                                    'libsecp256k1')),
     ext_package="secp256k1",
     cffi_modules=[
         "_cffi_build/build.py:ffi"

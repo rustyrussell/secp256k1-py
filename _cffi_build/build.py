@@ -6,7 +6,10 @@ from itertools import combinations
 from cffi import FFI, VerificationError
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from setup_support import has_system_lib, redirect, workdir, absolute
+from setup_support import (has_system_lib,  # noqa: E402
+                           redirect,
+                           workdir,
+                           absolute)
 
 Source = namedtuple('Source', ('h', 'include'))
 
@@ -32,13 +35,18 @@ def _mk_ffi(sources, name="_libsecp256k1", bundled=True, **kwargs):
     return ffi
 
 
-_base = [Source(absolute("_cffi_build/secp256k1.h"), "#include <secp256k1.h>", )]
+_base = [Source(absolute("_cffi_build/secp256k1.h"),
+                "#include <secp256k1.h>", )]
 
 _modules = {
-    'ecdh': Source(absolute("_cffi_build/secp256k1_ecdh.h"), "#include <secp256k1_ecdh.h>", ),
-    'recovery': Source(absolute("_cffi_build/secp256k1_recovery.h"), "#include <secp256k1_recovery.h>", ),
-    'schnorrsig': Source(absolute("_cffi_build/secp256k1_schnorrsig.h"), "#include <secp256k1_schnorrsig.h>", ),
-    'extrakeys': Source(absolute("_cffi_build/secp256k1_extrakeys.h"), "#include <secp256k1_extrakeys.h>", ),
+    'ecdh': Source(absolute("_cffi_build/secp256k1_ecdh.h"),
+                   "#include <secp256k1_ecdh.h>", ),
+    'recovery': Source(absolute("_cffi_build/secp256k1_recovery.h"),
+                       "#include <secp256k1_recovery.h>", ),
+    'schnorrsig': Source(absolute("_cffi_build/secp256k1_schnorrsig.h"),
+                         "#include <secp256k1_schnorrsig.h>", ),
+    'extrakeys': Source(absolute("_cffi_build/secp256k1_extrakeys.h"),
+                        "#include <secp256k1_extrakeys.h>", ),
 }
 
 
@@ -52,8 +60,8 @@ if has_system_lib():
     try:
         # try all combinations of optional modules that could be enabled
         # works downwards from most enabled modules to fewest
-        for l in range(len(_modules), -1, -1):
-            for combination in combinations(_modules.items(), l):
+        for i in range(len(_modules), -1, -1):
+            for combination in combinations(_modules.items(), i):
                 try:
                     _test_ffi = _mk_ffi(
                         _base + [item[1] for item in combination],
@@ -65,7 +73,7 @@ if has_system_lib():
                         _test_ffi.compile()
                     _available = combination
                     raise Break()
-                except VerificationError as ex:
+                except VerificationError:
                     pass
     except Break:
         ffi = _mk_ffi(
@@ -80,7 +88,8 @@ if has_system_lib():
         # We didn't find any functioning combination of modules
         # Normally this shouldn't happen but just in case we will fall back
         # to the bundled library
-        print("Installed libsecp256k1 is unusable falling back to bundled version.")
+        print("Installed libsecp256k1 is unusable"
+              " falling back to bundled version.")
 
 if ffi is None:
     # Library is not installed - use bundled one

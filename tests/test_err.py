@@ -2,6 +2,7 @@ import pytest
 import hashlib
 import secp256k1
 
+
 def test_privkey():
     with pytest.raises(TypeError):
         key = 'abc'
@@ -23,6 +24,7 @@ def test_privkey():
 
     # "good" key, should be fine.
     assert secp256k1.PrivateKey(b'1' * 32)
+
 
 def test_publickey():
     with pytest.raises(Exception):
@@ -61,6 +63,7 @@ def test_publickey():
         # Nothing to combine.
         new.combine([])
 
+
 def test_ecdsa():
     rawkey = (b'\xc9\xa9)Z\xf8Er\x97\x8b\xa23\x1f\xf7\xb6\x82qQ\xdc9\xc1'
               b'\x1d\xac6\xfd\xeb\x11\x05\xb1\xdf\x86\xb3\xe6')
@@ -81,6 +84,7 @@ def test_ecdsa():
     invalid_sig = priv.ecdsa_deserialize(sig)
     assert not priv.pubkey.ecdsa_verify(b'hi', invalid_sig)
 
+
 def test_ecdsa_compact():
     key = secp256k1.PrivateKey()
 
@@ -93,6 +97,7 @@ def test_ecdsa_compact():
     with pytest.raises(Exception):
         # A serialization that is not compact has more than 64 bytes.
         key.ecdsa_deserialize_compact(ser)
+
 
 def test_ecdsa_recoverable():
     if not secp256k1.HAS_RECOVERABLE:
@@ -119,6 +124,7 @@ def test_ecdsa_recoverable():
     with pytest.raises(Exception):
         priv.ecdsa_recoverable_deserialize(b'hello', 0)
 
+
 def test_schnorr():
     if not secp256k1.HAS_SCHNORR:
         pytest.skip('secp256k1_schnorr not enabled, skipping')
@@ -131,6 +137,7 @@ def test_schnorr():
                                 flags=secp256k1.NO_FLAGS)
     with pytest.raises(Exception):
         test1.schnorr_verify(b'hello', raw_sig, 'test_schnorr')
+
 
 def test_tweak():
     key = secp256k1.PrivateKey()

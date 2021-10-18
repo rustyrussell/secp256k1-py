@@ -26,6 +26,7 @@ def test_pubkey_from_privkey():
 
         assert inst.deserialize(inst.serialize()) == seckey
 
+
 def test_pubkey_combine():
     k1 = secp256k1.PrivateKey()
     k2 = secp256k1.PrivateKey()
@@ -42,6 +43,7 @@ def test_pubkey_combine():
     res = new.combine([pub1])
     assert new.public_key == res
     assert new.serialize() == k1.pubkey.serialize()
+
 
 def test_cli():
     parser, enc = secp256k1._parse_cli()

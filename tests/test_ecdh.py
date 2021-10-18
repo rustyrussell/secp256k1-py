@@ -2,6 +2,7 @@ import pytest
 
 import secp256k1
 
+
 def test_ecdh():
     if not secp256k1.HAS_ECDH:
         pytest.skip('secp256k1_ecdh not enabled, skipping')

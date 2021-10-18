@@ -46,7 +46,8 @@ def build_flags(library, type_, path):
         pkg_config_path.append(os.environ['PKG_CONFIG_PATH'])
     if "LIB_DIR" in os.environ:
         pkg_config_path.append(os.environ['LIB_DIR'])
-        pkg_config_path.append(os.path.join(os.environ['LIB_DIR'], "pkgconfig"))
+        pkg_config_path.append(os.path.join(os.environ['LIB_DIR'],
+                                            "pkgconfig"))
 
     options = [
         "--static",
@@ -74,7 +75,8 @@ def _find_lib():
         ffi.dlopen("secp256k1")
     except OSError:
         if 'LIB_DIR' in os.environ:
-            for path in glob.glob(os.path.join(os.environ['LIB_DIR'], "*secp256k1*")):
+            for path in glob.glob(os.path.join(os.environ['LIB_DIR'],
+                                               "*secp256k1*")):
                 try:
                     FFI().dlopen(path)
                     return True

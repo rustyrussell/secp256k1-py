@@ -1,6 +1,7 @@
 import pytest
 import secp256k1
 
+
 def test_pubkey_tweak():
     inst = secp256k1.PrivateKey()
     pub = inst.pubkey
@@ -21,6 +22,7 @@ def test_pubkey_tweak():
     res = pub.tweak_add(scalar)
     assert isinstance(res, secp256k1.PublicKey)
     assert res.serialize() != pub.serialize()
+
 
 def test_privkey_tweak():
     key = secp256k1.PrivateKey()

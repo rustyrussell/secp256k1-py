@@ -1,6 +1,7 @@
 import pytest
 import secp256k1
 
+
 def test_values():
     assert secp256k1.FLAG_VERIFY == (
         secp256k1.lib.SECP256K1_FLAGS_TYPE_CONTEXT |
@@ -11,6 +12,7 @@ def test_values():
         secp256k1.lib.SECP256K1_FLAGS_BIT_CONTEXT_SIGN)
     assert secp256k1.FLAG_SIGN == 513
     assert secp256k1.ALL_FLAGS == secp256k1.FLAG_SIGN | secp256k1.FLAG_VERIFY
+
 
 def test_privkey():
     with pytest.raises(AssertionError):
@@ -30,6 +32,7 @@ def test_privkey():
     sig = privkey.ecdsa_sign(b'hi')
     assert privkey.pubkey.ecdsa_verify(b'hi', sig)
 
+
 def test_pubkey():
     privkey = secp256k1.PrivateKey()
     sig = privkey.ecdsa_sign(b'hello')
@@ -42,6 +45,7 @@ def test_pubkey():
 
     pubkey = secp256k1.PublicKey(pubkeyser, raw=True)
     assert pubkey.ecdsa_verify(b'hello', sig)
+
 
 def test_recoverable():
     if not secp256k1.HAS_RECOVERABLE:

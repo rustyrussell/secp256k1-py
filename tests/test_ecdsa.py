@@ -25,9 +25,11 @@ def test_ecdsa():
         sig_raw = inst.ecdsa_sign(msg32, raw=True)
         sig_check = inst.ecdsa_serialize(sig_raw)
         assert sig_check == sig
-        assert inst.ecdsa_serialize(inst.ecdsa_deserialize(sig_check)) == sig_check
+        assert (inst.ecdsa_serialize(inst.ecdsa_deserialize(sig_check))
+                == sig_check)
 
         assert inst.pubkey.ecdsa_verify(msg32, sig_raw, raw=True)
+
 
 def test_ecdsa_compact():
     key = secp256k1.PrivateKey()
@@ -41,29 +43,31 @@ def test_ecdsa_compact():
     assert key.ecdsa_serialize_compact(sig_raw) == compact
     assert key.pubkey.ecdsa_verify(b'test', sig_raw)
 
+
 def test_ecdsa_normalize():
     key = secp256k1.PrivateKey()
     raw_sig = key.ecdsa_sign(b'hi')
 
     had_to_normalize, normsig = key.ecdsa_signature_normalize(raw_sig)
-    assert had_to_normalize == False
+    assert had_to_normalize is False
     assert key.ecdsa_serialize(normsig) == key.ecdsa_serialize(raw_sig)
-    assert key.ecdsa_serialize_compact(normsig) == \
-            key.ecdsa_serialize_compact(raw_sig)
+    assert (key.ecdsa_serialize_compact(normsig) ==
+            key.ecdsa_serialize_compact(raw_sig))
 
     had_to_normalize, normsig = key.ecdsa_signature_normalize(
         raw_sig, check_only=True)
-    assert had_to_normalize == False
-    assert normsig == None
+    assert had_to_normalize is False
+    assert normsig is None
 
     sig = b'\xAA' + (b'\xFF' * 31) + b'\xAA' + (b'\xFF' * 31)
     raw_sig = key.ecdsa_deserialize_compact(sig)
     normalized, normsig = key.ecdsa_signature_normalize(raw_sig)
-    assert normalized == True
+    assert normalized is True
     assert key.ecdsa_serialize(normsig) != key.ecdsa_serialize(raw_sig)
     normalized, normsig = key.ecdsa_signature_normalize(raw_sig, True)
-    assert normalized == True
-    assert normsig == None
+    assert normalized is True
+    assert normsig is None
+
 
 def test_ecdsa_recover():
     if not secp256k1.HAS_RECOVERABLE:
@@ -97,6 +101,7 @@ def test_ecdsa_recover():
     raw_sig = unrelated.ecdsa_recoverable_convert(recsig2)
     unrelated.ecdsa_deserialize(unrelated.ecdsa_serialize(raw_sig))
 
+
 def test_cli_ecdsa():
     parser, enc = secp256k1._parse_cli()
 
@@ -128,6 +133,7 @@ def test_cli_ecdsa():
     res = secp256k1._main_cli(args, out, enc)
     assert res == 1
     assert out.getvalue().strip() == str(False)
+
 
 def test_cli_ecdsa_recover():
     if not secp256k1.HAS_RECOVERABLE:
