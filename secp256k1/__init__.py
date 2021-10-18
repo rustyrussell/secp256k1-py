@@ -283,7 +283,7 @@ class PublicKey(Base, ECDSA):
 
         return bool(verified)
 
-    def ecdh(self, scalar, hashfn=lib.secp256k1_ecdh_hash_function_sha256, hasharg=ffi.NULL):
+    def ecdh(self, scalar, hashfn=ffi.NULL, hasharg=ffi.NULL):
         assert self.public_key, "No public key defined"
         if not HAS_ECDH:
             raise Exception("secp256k1_ecdh not enabled")
