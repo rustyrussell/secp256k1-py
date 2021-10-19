@@ -23,6 +23,7 @@ created!
 - Schnorr interface is completely changed to reflect the underlying interface
   changes (which follow [BIP-340]).
 - ECDH interface now supports using your own hashing functions.
+- Uses a global libsecp256k1 context.
 - Rusty Russell is now self-appointed maintainer.
 
 ### Removed
@@ -30,6 +31,7 @@ created!
 - Schnorr partial and pair functions removed (removed from underlying lib)
 - Requirement for gmp removed (removed from underlying lib)
 - Support for Python 2 (but patches welcome!)
+- Support for supplying your own secp256k1 context per PublicKey/PrivateKey
 
 ### Fixed
 

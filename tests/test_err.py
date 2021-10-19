@@ -125,20 +125,6 @@ def test_ecdsa_recoverable():
         priv.ecdsa_recoverable_deserialize(b'hello', 0)
 
 
-def test_schnorr():
-    if not secp256k1.HAS_SCHNORR:
-        pytest.skip('secp256k1_schnorr not enabled, skipping')
-        return
-
-    inst = secp256k1.PrivateKey()
-    raw_sig = inst.schnorr_sign(b'hello', 'test_schnorr')
-
-    test1 = secp256k1.PublicKey(inst.pubkey.public_key,
-                                flags=secp256k1.NO_FLAGS)
-    with pytest.raises(Exception):
-        test1.schnorr_verify(b'hello', raw_sig, 'test_schnorr')
-
-
 def test_tweak():
     key = secp256k1.PrivateKey()
 
