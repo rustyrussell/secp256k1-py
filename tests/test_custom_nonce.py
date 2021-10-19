@@ -1,6 +1,8 @@
 import os
 import json
 import secp256k1
+import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
@@ -36,10 +38,14 @@ return 1;
 }
                """)
 
-ffi.compile()
+with tempfile.TemporaryDirectory() as build_temp:
+    ffi.compile(tmpdir=build_temp)
 
-import _noncefunc  # noqa: E402
-from _noncefunc import ffi  # noqa: E402
+    # Make sure we can find our nonce.
+    sys.path.append(build_temp)
+
+    import _noncefunc  # noqa: E402
+    from _noncefunc import ffi  # noqa: E402
 
 
 def test_ecdsa_with_custom_nonce():
