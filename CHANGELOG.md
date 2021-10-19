@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.14.0 - 2021-10-19: "In Which Bitcoin Twitter Rescues Rusty"
 
-After 4 years of neglect, I filed a request to take over maintenance.
+After 5 years of neglect, I filed a request to take over maintenance.
 I hope the previous author (Ludvig Broberg) is living a joyous life
 somewhere, and if he ever looks at this, is proud of the project he
 created!
