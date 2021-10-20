@@ -74,9 +74,9 @@ def test_ecdsa_recover():
         pytest.skip('secp256k1_recovery not enabled, skipping')
         return
 
-    class MyECDSA(secp256k1.Base, secp256k1.ECDSA):
+    class MyECDSA(secp256k1.ECDSA):
         def __init__(self):
-            secp256k1.Base.__init__(self, ctx=None, flags=secp256k1.ALL_FLAGS)
+            secp256k1.ECDSA.__init__(self)
 
     privkey = secp256k1.PrivateKey()
     unrelated = MyECDSA()

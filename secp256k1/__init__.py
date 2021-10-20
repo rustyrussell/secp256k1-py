@@ -8,53 +8,17 @@ from ._libsecp256k1 import ffi, lib
 EC_COMPRESSED = lib.SECP256K1_EC_COMPRESSED
 EC_UNCOMPRESSED = lib.SECP256K1_EC_UNCOMPRESSED
 
-FLAG_SIGN = lib.SECP256K1_CONTEXT_SIGN
-FLAG_VERIFY = lib.SECP256K1_CONTEXT_VERIFY
-ALL_FLAGS = FLAG_SIGN | FLAG_VERIFY
-NO_FLAGS = lib.SECP256K1_CONTEXT_NONE
-
 HAS_RECOVERABLE = hasattr(lib, 'secp256k1_ecdsa_sign_recoverable')
 HAS_SCHNORR = hasattr(lib, 'secp256k1_schnorrsig_sign')
 HAS_ECDH = hasattr(lib, 'secp256k1_ecdh')
 HAS_EXTRAKEYS = hasattr(lib, 'secp256k1_keypair_create')
 
-
-class Base(object):
-
-    def __init__(self, ctx, flags):
-        self._destroy = None
-        if ctx is None:
-            assert flags in (NO_FLAGS, FLAG_SIGN, FLAG_VERIFY, ALL_FLAGS)
-            ctx = lib.secp256k1_context_create(flags)
-            self._destroy = lib.secp256k1_context_destroy
-
-        self.flags = flags
-        self.ctx = ctx
-
-    def __del__(self):
-        if not hasattr(self, '_destroy'):
-            return
-
-        if self._destroy and self.ctx:
-            self._destroy(self.ctx)
-            self.ctx = None
-
-    def bip340_tag(self, msg, raw, tag):
-        if raw:
-            return msg
-
-        if isinstance(tag, bytes):
-            bytestag = tag
-        else:
-            bytestag = tag.encode()
-
-        hash32 = ffi.new('char [32]')
-        lib.secp256k1_tagged_sha256(self.ctx, hash32, bytestag, len(bytestag),
-                                    msg, len(msg))
-        return bytes(ffi.buffer(hash32, 32))
+# Keeping a single one of these is most efficient.
+secp256k1_ctx = lib.secp256k1_context_create(lib.SECP256K1_CONTEXT_SIGN
+                                             | lib.SECP256K1_CONTEXT_VERIFY)
 
 
-class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
+class ECDSA:
 
     def ecdsa_serialize(self, raw_sig):
         len_sig = 74
@@ -62,7 +26,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
         outputlen = ffi.new('size_t *', len_sig)
 
         res = lib.secp256k1_ecdsa_signature_serialize_der(
-            self.ctx, output, outputlen, raw_sig)
+            secp256k1_ctx, output, outputlen, raw_sig)
         assert res == 1
 
         return bytes(ffi.buffer(output, outputlen[0]))
@@ -70,7 +34,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
     def ecdsa_deserialize(self, ser_sig):
         raw_sig = ffi.new('secp256k1_ecdsa_signature *')
         res = lib.secp256k1_ecdsa_signature_parse_der(
-            self.ctx, raw_sig, ser_sig, len(ser_sig))
+            secp256k1_ctx, raw_sig, ser_sig, len(ser_sig))
         assert res == 1
 
         return raw_sig
@@ -80,7 +44,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
         output = ffi.new('unsigned char[%d]' % len_sig)
 
         res = lib.secp256k1_ecdsa_signature_serialize_compact(
-            self.ctx, output, raw_sig)
+            secp256k1_ctx, output, raw_sig)
         assert res == 1
 
         return bytes(ffi.buffer(output, len_sig))
@@ -91,7 +55,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
 
         raw_sig = ffi.new('secp256k1_ecdsa_signature *')
         res = lib.secp256k1_ecdsa_signature_parse_compact(
-            self.ctx, raw_sig, ser_sig)
+            secp256k1_ctx, raw_sig, ser_sig)
         assert res == 1
 
         return raw_sig
@@ -112,7 +76,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
             sigout = ffi.new('secp256k1_ecdsa_signature *')
 
         result = lib.secp256k1_ecdsa_signature_normalize(
-            self.ctx, sigout, raw_sig)
+            secp256k1_ctx, sigout, raw_sig)
 
         return (bool(result), sigout if sigout != ffi.NULL else None)
 
@@ -120,14 +84,12 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
                       digest=hashlib.sha256):
         if not HAS_RECOVERABLE:
             raise Exception("secp256k1_recovery not enabled")
-        if self.flags & ALL_FLAGS != ALL_FLAGS:
-            raise Exception("instance not configured for ecdsa recover")
 
         msg32 = _hash32(msg, raw, digest)
         pubkey = ffi.new('secp256k1_pubkey *')
 
         recovered = lib.secp256k1_ecdsa_recover(
-            self.ctx, pubkey, recover_sig, msg32)
+            secp256k1_ctx, pubkey, recover_sig, msg32)
         if recovered:
             return pubkey
         raise Exception('failed to recover ECDSA public key')
@@ -141,7 +103,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
         recid = ffi.new('int *')
 
         lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
-            self.ctx, output, recid, recover_sig)
+            secp256k1_ctx, output, recid, recover_sig)
 
         return bytes(ffi.buffer(output, outputlen)), recid[0]
 
@@ -156,7 +118,7 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
         recover_sig = ffi.new('secp256k1_ecdsa_recoverable_signature *')
 
         parsed = lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
-            self.ctx, recover_sig, ser_sig, rec_id)
+            secp256k1_ctx, recover_sig, ser_sig, rec_id)
         if parsed:
             return recover_sig
         else:
@@ -169,15 +131,14 @@ class ECDSA:  # Use as a mixin; instance.ctx is assumed to exist.
         normal_sig = ffi.new('secp256k1_ecdsa_signature *')
 
         lib.secp256k1_ecdsa_recoverable_signature_convert(
-            self.ctx, normal_sig, recover_sig)
+            secp256k1_ctx, normal_sig, recover_sig)
 
         return normal_sig
 
 
-class PublicKey(Base, ECDSA):
+class PublicKey(ECDSA):
 
-    def __init__(self, pubkey=None, raw=False, flags=FLAG_VERIFY, ctx=None):
-        Base.__init__(self, ctx, flags)
+    def __init__(self, pubkey=None, raw=False):
         if pubkey is not None:
             if raw:
                 if not isinstance(pubkey, bytes):
@@ -195,7 +156,7 @@ class PublicKey(Base, ECDSA):
     def _pubkey_changed(self):
         if HAS_EXTRAKEYS:
             self.xonly_pubkey = ffi.new('secp256k1_xonly_pubkey *')
-            assert lib.secp256k1_xonly_pubkey_from_pubkey(self.ctx,
+            assert lib.secp256k1_xonly_pubkey_from_pubkey(secp256k1_ctx,
                                                           self.xonly_pubkey,
                                                           ffi.NULL,
                                                           self.public_key) == 1
@@ -209,7 +170,7 @@ class PublicKey(Base, ECDSA):
         compflag = EC_COMPRESSED if compressed else EC_UNCOMPRESSED
 
         serialized = lib.secp256k1_ec_pubkey_serialize(
-            self.ctx, res_compressed, outlen, self.public_key, compflag)
+            secp256k1_ctx, res_compressed, outlen, self.public_key, compflag)
         assert serialized == 1
 
         return bytes(ffi.buffer(res_compressed, len_compressed))
@@ -221,7 +182,7 @@ class PublicKey(Base, ECDSA):
         pubkey = ffi.new('secp256k1_pubkey *')
 
         res = lib.secp256k1_ec_pubkey_parse(
-            self.ctx, pubkey, pubkey_ser, len(pubkey_ser))
+            secp256k1_ctx, pubkey, pubkey_ser, len(pubkey_ser))
         if not res:
             raise Exception("invalid public key")
 
@@ -238,7 +199,7 @@ class PublicKey(Base, ECDSA):
             assert ffi.typeof(item) is ffi.typeof('secp256k1_pubkey *')
 
         res = lib.secp256k1_ec_pubkey_combine(
-            self.ctx, outpub, pubkeys, len(pubkeys))
+            secp256k1_ctx, outpub, pubkeys, len(pubkeys))
         if not res:
             raise Exception('failed to combine public keys')
 
@@ -262,13 +223,11 @@ class PublicKey(Base, ECDSA):
 
     def ecdsa_verify(self, msg, raw_sig, raw=False, digest=hashlib.sha256):
         assert self.public_key, "No public key defined"
-        if self.flags & FLAG_VERIFY != FLAG_VERIFY:
-            raise Exception("instance not configured for sig verification")
 
         msg32 = _hash32(msg, raw, digest)
 
         verified = lib.secp256k1_ecdsa_verify(
-            self.ctx, raw_sig, msg32, self.public_key)
+            secp256k1_ctx, raw_sig, msg32, self.public_key)
 
         return bool(verified)
 
@@ -276,13 +235,11 @@ class PublicKey(Base, ECDSA):
         assert self.public_key, "No public key defined"
         if not HAS_SCHNORR:
             raise Exception("secp256k1_schnorr not enabled")
-        if self.flags & FLAG_VERIFY != FLAG_VERIFY:
-            raise Exception("instance not configured for sig verification")
 
-        msg_to_sign = self.bip340_tag(msg, raw, bip340tag)
+        msg_to_sign = _bip340_tag(msg, raw, bip340tag)
 
         verified = lib.secp256k1_schnorrsig_verify(
-            self.ctx, schnorr_sig, msg_to_sign, len(msg_to_sign),
+            secp256k1_ctx, schnorr_sig, msg_to_sign, len(msg_to_sign),
             self.xonly_pubkey)
 
         return bool(verified)
@@ -297,20 +254,17 @@ class PublicKey(Base, ECDSA):
 
         result = ffi.new('char [32]')
 
-        res = lib.secp256k1_ecdh(self.ctx, result, self.public_key, scalar,
-                                 hashfn, hasharg)
+        res = lib.secp256k1_ecdh(secp256k1_ctx, result, self.public_key,
+                                 scalar, hashfn, hasharg)
         if not res:
             raise Exception('invalid scalar ({})'.format(res))
 
         return bytes(ffi.buffer(result, 32))
 
 
-class PrivateKey(Base, ECDSA):
+class PrivateKey(ECDSA):
 
-    def __init__(self, privkey=None, raw=True, flags=ALL_FLAGS, ctx=None):
-        assert flags in (ALL_FLAGS, FLAG_SIGN)
-
-        Base.__init__(self, ctx, flags)
+    def __init__(self, privkey=None, raw=True):
         self.pubkey = None
         self.private_key = None
         if privkey is None:
@@ -325,17 +279,16 @@ class PrivateKey(Base, ECDSA):
 
     def _update_public_key(self):
         public_key = self._gen_public_key(self.private_key)
-        self.pubkey = PublicKey(
-            public_key, raw=False, ctx=self.ctx, flags=self.flags)
+        self.pubkey = PublicKey(public_key, raw=False)
         if HAS_EXTRAKEYS:
             self.keypair = ffi.new('secp256k1_keypair *')
-            if lib.secp256k1_keypair_create(self.ctx,
+            if lib.secp256k1_keypair_create(secp256k1_ctx,
                                             self.keypair,
                                             self.private_key) != 1:
                 raise Exception("invalid private key (can't make keypair?)")
 
     def set_raw_privkey(self, privkey):
-        if not lib.secp256k1_ec_seckey_verify(self.ctx, privkey):
+        if not lib.secp256k1_ec_seckey_verify(secp256k1_ctx, privkey):
             raise Exception("invalid private key")
         self.private_key = privkey
         self._update_public_key()
@@ -355,7 +308,8 @@ class PrivateKey(Base, ECDSA):
     def _gen_public_key(self, privkey):
         pubkey_ptr = ffi.new('secp256k1_pubkey *')
 
-        created = lib.secp256k1_ec_pubkey_create(self.ctx, pubkey_ptr, privkey)
+        created = lib.secp256k1_ec_pubkey_create(secp256k1_ctx,
+                                                 pubkey_ptr, privkey)
         assert created == 1
 
         return pubkey_ptr
@@ -383,7 +337,8 @@ class PrivateKey(Base, ECDSA):
         if custom_nonce:
             nonce_fn, nonce_data = custom_nonce
         signed = lib.secp256k1_ecdsa_sign(
-            self.ctx, raw_sig, msg32, self.private_key, nonce_fn, nonce_data)
+            secp256k1_ctx, raw_sig, msg32, self.private_key,
+            nonce_fn, nonce_data)
         assert signed == 1
 
         return raw_sig
@@ -396,7 +351,8 @@ class PrivateKey(Base, ECDSA):
         raw_sig = ffi.new('secp256k1_ecdsa_recoverable_signature *')
 
         signed = lib.secp256k1_ecdsa_sign_recoverable(
-            self.ctx, raw_sig, msg32, self.private_key, ffi.NULL, ffi.NULL)
+            secp256k1_ctx, raw_sig, msg32, self.private_key,
+            ffi.NULL, ffi.NULL)
         assert signed == 1
 
         return raw_sig
@@ -405,16 +361,31 @@ class PrivateKey(Base, ECDSA):
         if not HAS_SCHNORR:
             raise Exception("secp256k1_schnorr not enabled")
 
-        msg_to_sign = self.bip340_tag(msg, raw, bip340tag)
+        msg_to_sign = _bip340_tag(msg, raw, bip340tag)
         sig64 = ffi.new('char [64]')
 
         # FIXME: It's recommended to provide aux_rand32...
         signed = lib.secp256k1_schnorrsig_sign_custom(
-            self.ctx, sig64, msg_to_sign, len(msg_to_sign),
+            secp256k1_ctx, sig64, msg_to_sign, len(msg_to_sign),
             self.keypair, ffi.NULL)
         assert signed == 1
 
         return bytes(ffi.buffer(sig64, 64))
+
+
+def _bip340_tag(msg, raw, tag):
+    if raw:
+        return msg
+
+    if isinstance(tag, bytes):
+        bytestag = tag
+    else:
+        bytestag = tag.encode()
+
+    hash32 = ffi.new('char [32]')
+    lib.secp256k1_tagged_sha256(secp256k1_ctx, hash32, bytestag, len(bytestag),
+                                msg, len(msg))
+    return bytes(ffi.buffer(hash32, 32))
 
 
 def _hash32(msg, raw, digest):
@@ -440,7 +411,7 @@ def _tweak_public(inst, func, scalar):
     # Create a copy of the current public key.
     newpub = PublicKey(inst.serialize(), raw=True)
 
-    res = func(inst.ctx, newpub.public_key, scalar)
+    res = func(secp256k1_ctx, newpub.public_key, scalar)
     if not res:
         raise Exception("Tweak is out of range")
 
@@ -454,7 +425,7 @@ def _tweak_private(inst, func, scalar):
     # Create a copy of the current private key.
     key = ffi.new('char [32]', inst.private_key)
 
-    res = func(inst.ctx, key, scalar)
+    res = func(secp256k1_ctx, key, scalar)
     if not res:
         raise Exception("Tweak is out of range")
 
@@ -516,7 +487,7 @@ def _main_cli(args, out, encoding='utf-8'):  # noqa: C901
             show_public(priv.pubkey)
 
     elif args.action == 'recpub':
-        empty = PublicKey(flags=ALL_FLAGS)
+        empty = PublicKey()
         sig_raw = bytes(bytearray.fromhex(args.signature))
         sig = empty.ecdsa_recoverable_deserialize(sig_raw, args.recid)
         pubkey = empty.ecdsa_recover(args.message, sig)
