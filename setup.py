@@ -263,7 +263,7 @@ setup(
     version="0.14.0",
 
     description='FFI bindings to libsecp256k1',
-    url='https://github.com/ludbb/secp256k1-py',
+    url='https://github.com/rustyrussell/secp256k1-py',
     author='Ludvig Broberg',
     author_email='lud@tutanota.com',
     maintainer='Rusty Russell',
