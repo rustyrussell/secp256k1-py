@@ -258,11 +258,16 @@ class develop(_develop):
         _develop.run(self)
 
 
+with io.open('README.md', encoding='utf-8') as f:
+    long_description = f.read()
+
 setup(
     name="secp256k1",
     version="0.14.0",
 
     description='FFI bindings to libsecp256k1',
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     url='https://github.com/rustyrussell/secp256k1-py',
     author='Ludvig Broberg',
     author_email='lud@tutanota.com',
