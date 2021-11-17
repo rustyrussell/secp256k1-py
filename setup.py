@@ -192,6 +192,8 @@ class build_clib(_build_clib):
         cmd = [
             absolute("libsecp256k1/configure"),
             "--disable-shared",
+            "--disable-benchmark",
+            "--disable-tests",
             "--enable-static",
             "--disable-dependency-tracking",
             "--with-pic",
