@@ -1,0 +1,41 @@
+name: Build wheels
+
+on: [push]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: 
+          - ubuntu-20.04
+# Windows is broken
+#          - windows-2019
+          - macOS-10.15
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v2
+
+      - name: Install cibuildwheel
+        run: python -m pip install cibuildwheel==2.2.2
+
+      - name: Build wheels
+        run: python -m cibuildwheel --output-dir wheelhouse
+        env:
+          # Use the `build` frontend instead of `pip` to allow in-tree
+          # builds (which `pip` will eventually migrate to as well).
+          CIBW_BUILD_FRONTEND: "build"
+          CIBW_BEFORE_ALL_LINUX: |
+            rm -rf build .eggs
+          CIBW_BEFORE_ALL_MACOS: |
+            rm -rf build .eggs
+            brew install automake
+          CIBW_SKIP: "pp*"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
