@@ -10,8 +10,7 @@ jobs:
       matrix:
         os: 
           - ubuntu-20.04
-# Windows is broken
-#          - windows-2019
+          - windows-2019
           - macOS-10.15
 
     steps:
@@ -39,3 +38,14 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+          
+      - name: Publish a Python distribution to PyPI
+        # Pushes that are tags should publish to the production PyPI
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: ./wheelhouse/
+          verbose: true
+          print_hash: true
