@@ -30,7 +30,7 @@ created!
 
 - Schnorr partial and pair functions removed (removed from underlying lib)
 - Requirement for gmp removed (removed from underlying lib)
-- Support for Python 2 (but patches welcome!)
+- Support for Python 2
 - Support for supplying your own secp256k1 context per PublicKey/PrivateKey
 
 ### Fixed

@@ -31,10 +31,6 @@ def test_privkey():
 def test_publickey():
     with pytest.raises(Exception):
         # Must be bytes.
-
-        # In Python 2 this will not raise a TypeError
-        # since bytes is an alias to str, instead it will fail
-        # during deserialization.
         secp256k1.PublicKey("abc", raw=True)
     with pytest.raises(Exception):
         secp256k1.PublicKey([], raw=True)
