@@ -53,7 +53,7 @@ def build_flags(library, type_, path):
     ]
 
     return [
-        flag.strip("-{}".format(type_))
+        flag.strip(f"-{type_}")
         for flag in subprocess.check_output(
             ["pkg-config"] + options + [library],
             env=dict(os.environ, PKG_CONFIG_PATH=":".join(pkg_config_path)),

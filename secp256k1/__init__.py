@@ -268,7 +268,7 @@ class PublicKey(ECDSA):
             secp256k1_ctx, result, self.public_key, scalar, hashfn, hasharg
         )
         if not res:
-            raise Exception("invalid scalar ({})".format(res))
+            raise Exception(f"invalid scalar ({res})")
 
         return bytes(ffi.buffer(result, 32))
 
@@ -450,7 +450,7 @@ def _main_cli(args, out, encoding="utf-8"):  # noqa: C901
 
     def show_public(public_key):
         rawp = public_key.serialize()
-        out.write("Public key: {}\n".format(binascii.hexlify(rawp).decode(encoding)))
+        out.write(f"Public key: {binascii.hexlify(rawp).decode(encoding)}\n")
 
     def sign(funcname, params):
         raw = bytes(bytearray.fromhex(params.private_key))
@@ -466,14 +466,14 @@ def _main_cli(args, out, encoding="utf-8"):  # noqa: C901
             rawkey = None
         priv = PrivateKey(rawkey)
         raw = priv.private_key
-        out.write("{}\n".format(binascii.hexlify(raw).decode(encoding)))
+        out.write(f"{binascii.hexlify(raw).decode(encoding)}\n")
         if args.show_pubkey:
             show_public(priv.pubkey)
 
     elif args.action == "sign":
         priv, sig_raw = sign("ecdsa_sign", args)
         sig = priv.ecdsa_serialize(sig_raw)
-        out.write("{}\n".format(binascii.hexlify(sig).decode(encoding)))
+        out.write(f"{binascii.hexlify(sig).decode(encoding)}\n")
         if args.show_pubkey:
             show_public(priv.pubkey)
 
@@ -486,13 +486,13 @@ def _main_cli(args, out, encoding="utf-8"):  # noqa: C901
             good = pub.ecdsa_verify(args.message, sig_raw)
         except:  # noqa: E722
             good = False
-        out.write("{}\n".format(good))
+        out.write(f"{good}\n")
         return 0 if good else 1
 
     elif args.action == "signrec":
         priv, sig = sign("ecdsa_sign_recoverable", args)
         sig, recid = priv.ecdsa_recoverable_serialize(sig)
-        out.write("{} {}\n".format(binascii.hexlify(sig).decode(encoding), recid))
+        out.write(f"{binascii.hexlify(sig).decode(encoding)} {recid}\n")
         if args.show_pubkey:
             show_public(priv.pubkey)
 
