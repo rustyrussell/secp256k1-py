@@ -6,12 +6,10 @@ from itertools import combinations
 from cffi import FFI, VerificationError
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from setup_support import (has_system_lib,  # noqa: E402
-                           redirect,
-                           workdir,
-                           absolute)
+from setup_support import has_system_lib  # noqa: E402
+from setup_support import absolute, redirect, workdir
 
-Source = namedtuple('Source', ('h', 'include'))
+Source = namedtuple("Source", ("h", "include"))
 
 
 class Break(Exception):
@@ -21,12 +19,12 @@ class Break(Exception):
 def _mk_ffi(sources, name="_libsecp256k1", bundled=True, **kwargs):
     ffi = FFI()
     code = []
-    if 'INCLUDE_DIR' in os.environ:
-        kwargs['include_dirs'] = [absolute(os.environ['INCLUDE_DIR'])]
-    if 'LIB_DIR' in os.environ:
-        kwargs['library_dirs'] = [absolute(os.environ['LIB_DIR'])]
+    if "INCLUDE_DIR" in os.environ:
+        kwargs["include_dirs"] = [absolute(os.environ["INCLUDE_DIR"])]
+    if "LIB_DIR" in os.environ:
+        kwargs["library_dirs"] = [absolute(os.environ["LIB_DIR"])]
     for source in sources:
-        with open(source.h, 'rt') as h:
+        with open(source.h, "rt") as h:
             ffi.cdef(h.read())
         code.append(source.include)
     if bundled:
@@ -35,18 +33,30 @@ def _mk_ffi(sources, name="_libsecp256k1", bundled=True, **kwargs):
     return ffi
 
 
-_base = [Source(absolute("_cffi_build/secp256k1.h"),
-                "#include <secp256k1.h>", )]
+_base = [
+    Source(
+        absolute("_cffi_build/secp256k1.h"),
+        "#include <secp256k1.h>",
+    )
+]
 
 _modules = {
-    'ecdh': Source(absolute("_cffi_build/secp256k1_ecdh.h"),
-                   "#include <secp256k1_ecdh.h>", ),
-    'recovery': Source(absolute("_cffi_build/secp256k1_recovery.h"),
-                       "#include <secp256k1_recovery.h>", ),
-    'schnorrsig': Source(absolute("_cffi_build/secp256k1_schnorrsig.h"),
-                         "#include <secp256k1_schnorrsig.h>", ),
-    'extrakeys': Source(absolute("_cffi_build/secp256k1_extrakeys.h"),
-                        "#include <secp256k1_extrakeys.h>", ),
+    "ecdh": Source(
+        absolute("_cffi_build/secp256k1_ecdh.h"),
+        "#include <secp256k1_ecdh.h>",
+    ),
+    "recovery": Source(
+        absolute("_cffi_build/secp256k1_recovery.h"),
+        "#include <secp256k1_recovery.h>",
+    ),
+    "schnorrsig": Source(
+        absolute("_cffi_build/secp256k1_schnorrsig.h"),
+        "#include <secp256k1_schnorrsig.h>",
+    ),
+    "extrakeys": Source(
+        absolute("_cffi_build/secp256k1_extrakeys.h"),
+        "#include <secp256k1_extrakeys.h>",
+    ),
 }
 
 
@@ -67,7 +77,7 @@ if has_system_lib():
                         _base + [item[1] for item in combination],
                         name="_testcompile",
                         bundled=False,
-                        libraries=['secp256k1']
+                        libraries=["secp256k1"],
                     )
                     with redirect(sys.stderr, os.devnull), workdir():
                         _test_ffi.compile()
@@ -77,26 +87,25 @@ if has_system_lib():
                     pass
     except Break:
         ffi = _mk_ffi(
-            _base + [i[1] for i in _available],
-            bundled=False,
-            libraries=['secp256k1']
+            _base + [i[1] for i in _available], bundled=False, libraries=["secp256k1"]
         )
-        print("Using system libsecp256k1 with modules: {}".format(
-            ", ".join(i[0] for i in _available))
+        print(
+            "Using system libsecp256k1 with modules: {}".format(
+                ", ".join(i[0] for i in _available)
+            )
         )
     else:
         # We didn't find any functioning combination of modules
         # Normally this shouldn't happen but just in case we will fall back
         # to the bundled library
-        print("Installed libsecp256k1 is unusable"
-              " falling back to bundled version.")
+        print("Installed libsecp256k1 is unusable" " falling back to bundled version.")
 
 if ffi is None:
     # Library is not installed - use bundled one
     print("Using bundled libsecp256k1")
 
     # We usually build all the experimental bits, since they're useful.
-    if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
-        ffi = _mk_ffi(_base + list(_modules.values()), libraries=['secp256k1'])
+    if not os.environ.get("SECP_BUNDLED_NO_EXPERIMENTAL"):
+        ffi = _mk_ffi(_base + list(_modules.values()), libraries=["secp256k1"])
     else:
-        ffi = _mk_ffi(_base + [_modules['recovery']], libraries=['secp256k1'])
+        ffi = _mk_ffi(_base + [_modules["recovery"]], libraries=["secp256k1"])
