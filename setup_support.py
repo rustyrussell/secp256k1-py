@@ -1,10 +1,9 @@
 import glob
 import os
 import shutil
+import subprocess
 from contextlib import contextmanager
 from tempfile import mkdtemp
-
-import subprocess
 
 
 @contextmanager
@@ -22,7 +21,7 @@ def workdir():
 @contextmanager
 def redirect(stdchannel, dest_filename):
     oldstdchannel = os.dup(stdchannel.fileno())
-    dest_file = open(dest_filename, 'w')
+    dest_file = open(dest_filename, "w")
     os.dup2(dest_file.fileno(), stdchannel.fileno())
     try:
         yield
@@ -41,42 +40,38 @@ def absolute(*paths):
 def build_flags(library, type_, path):
     """Return separated build flags from pkg-config output"""
 
-    pkg_config_path = [os.path.join(path, 'lib', 'pkgconfig')]
+    pkg_config_path = [os.path.join(path, "lib", "pkgconfig")]
     if "PKG_CONFIG_PATH" in os.environ:
-        pkg_config_path.append(os.environ['PKG_CONFIG_PATH'])
+        pkg_config_path.append(os.environ["PKG_CONFIG_PATH"])
     if "LIB_DIR" in os.environ:
-        pkg_config_path.append(os.environ['LIB_DIR'])
-        pkg_config_path.append(os.path.join(os.environ['LIB_DIR'],
-                                            "pkgconfig"))
+        pkg_config_path.append(os.environ["LIB_DIR"])
+        pkg_config_path.append(os.path.join(os.environ["LIB_DIR"], "pkgconfig"))
 
     options = [
         "--static",
-        {
-            'I': "--cflags-only-I",
-            'L': "--libs-only-L",
-            'l': "--libs-only-l"
-        }[type_]
+        {"I": "--cflags-only-I", "L": "--libs-only-L", "l": "--libs-only-l"}[type_],
     ]
 
     return [
-        flag.strip("-{}".format(type_))
-        for flag
-        in subprocess.check_output(
+        flag.strip(f"-{type_}")
+        for flag in subprocess.check_output(
             ["pkg-config"] + options + [library],
-            env=dict(os.environ, PKG_CONFIG_PATH=":".join(pkg_config_path))
-        ).decode("UTF-8").split()
+            env=dict(os.environ, PKG_CONFIG_PATH=":".join(pkg_config_path)),
+        )
+        .decode("UTF-8")
+        .split()
     ]
 
 
 def _find_lib():
     from cffi import FFI
+
     ffi = FFI()
     try:
         ffi.dlopen("secp256k1")
     except OSError:
-        if 'LIB_DIR' in os.environ:
-            for path in glob.glob(os.path.join(os.environ['LIB_DIR'],
-                                               "*secp256k1*")):
+        if "LIB_DIR" in os.environ:
+            for path in glob.glob(os.path.join(os.environ["LIB_DIR"], "*secp256k1*")):
                 try:
                     FFI().dlopen(path)
                     return True
