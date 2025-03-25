@@ -25,12 +25,13 @@ def _mk_ffi(sources, name="_libsecp256k1", bundled=True, **kwargs):
         kwargs['include_dirs'] = [absolute(os.environ['INCLUDE_DIR'])]
     if 'LIB_DIR' in os.environ:
         kwargs['library_dirs'] = [absolute(os.environ['LIB_DIR'])]
+    if bundled:
+        code.append("#define PY_USE_BUNDLED")
+        code.append("#define SECP256K1_STATIC")
     for source in sources:
         with open(source.h, 'rt') as h:
             ffi.cdef(h.read())
         code.append(source.include)
-    if bundled:
-        code.append("#define PY_USE_BUNDLED")
     ffi.set_source(name, "\n".join(code), **kwargs)
     return ffi
 
@@ -51,6 +52,8 @@ _modules = {
 
 
 ffi = None
+
+library_name = "libsecp256k1" if os.name == "nt" else "secp256k1"
 
 # The following is used to detect whether the library is already installed on
 # the system (and if so which modules are enabled) or if we will use the
@@ -97,6 +100,6 @@ if ffi is None:
 
     # We usually build all the experimental bits, since they're useful.
     if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
-        ffi = _mk_ffi(_base + list(_modules.values()), libraries=['secp256k1'])
+        ffi = _mk_ffi(_base + list(_modules.values()), libraries=[library_name])
     else:
-        ffi = _mk_ffi(_base + [_modules['recovery']], libraries=['secp256k1'])
+        ffi = _mk_ffi(_base + [_modules['recovery']], libraries=[library_name])

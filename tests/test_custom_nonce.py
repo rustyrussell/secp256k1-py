@@ -38,7 +38,8 @@ return 1;
 }
                """)
 
-with tempfile.TemporaryDirectory() as build_temp:
+# XXX: ignore_cleanup_errors because deletion fails on Windows
+with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as build_temp:
     ffi.compile(tmpdir=build_temp)
 
     # Make sure we can find our nonce.

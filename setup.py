@@ -1,11 +1,9 @@
-import errno
 import io
 import os
 import os.path
 import shutil
 import subprocess
 import tarfile
-import tempfile
 from distutils import log
 from distutils.command.build_clib import build_clib as _build_clib
 from distutils.command.build_ext import build_ext as _build_ext
@@ -34,13 +32,13 @@ except ImportError:
 
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from setup_support import absolute, build_flags, has_system_lib  # noqa: E402
+from setup_support import absolute, has_system_lib  # noqa: E402
 
 
 # Version of libsecp256k1 to download if none exists in the `libsecp256k1`
 # directory
 LIB_TARBALL_URL = ("https://github.com/bitcoin-core/secp256k1/archive/"
-                   "9526874d1406a13193743c605ba64358d55a8785"
+                   "refs/tags/v0.6.0"
                    ".tar.gz")
 
 
@@ -52,21 +50,12 @@ if [int(i) for i in setuptools_version.split('.')] < [3, 3]:
         .format(setuptools_version)
     )
 
-# Ensure pkg-config is available
-try:
-    subprocess.check_call(['pkg-config', '--version'])
-except OSError:
-    raise SystemExit(
-        "'pkg-config' is required to install this package. "
-        "Please see the README for details."
-    )
-
 
 def download_library(command):
     if command.dry_run:
         return
     libdir = absolute("libsecp256k1")
-    if os.path.exists(os.path.join(libdir, "autogen.sh")):
+    if os.path.exists(os.path.join(libdir, "CMakeLists.txt")):
         # Library already downloaded
         return
     if not os.path.exists(libdir):
@@ -149,10 +138,6 @@ class build_clib(_build_clib):
     def check_library_list(self, libraries):
         raise Exception("check_library_list")
 
-    def get_library_names(self):
-        return build_flags('libsecp256k1', 'l',
-                           os.path.abspath(self.build_clib))
-
     def run(self):
         if has_system_lib():
             log.info("Using system library")
@@ -161,76 +146,53 @@ class build_clib(_build_clib):
         # Ensure library has been downloaded (sdist might have been skipped)
         download_library(self)
 
-        if not os.path.exists(absolute("libsecp256k1/configure")):
-            # configure script hasn't been generated yet
-            autogen = absolute("libsecp256k1/autogen.sh")
-            os.chmod(absolute(autogen), 0o755)
-            subprocess.check_call(
-                [autogen],
-                cwd=absolute("libsecp256k1"),
-            )
-
-        for filename in [
-            "libsecp256k1/configure",
-            "libsecp256k1/build-aux/compile",
-            "libsecp256k1/build-aux/config.guess",
-            "libsecp256k1/build-aux/config.sub",
-            "libsecp256k1/build-aux/depcomp",
-            "libsecp256k1/build-aux/install-sh",
-            "libsecp256k1/build-aux/missing",
-            "libsecp256k1/build-aux/test-driver",
-        ]:
-            try:
-                os.chmod(absolute(filename), 0o755)
-            except OSError as e:
-                # some of files might not exist depending on autoconf version
-                if e.errno != errno.ENOENT:
-                    # If the error isn't "No such file or directory" something
-                    # else is wrong and we want to know about it
-                    raise
-
         cmd = [
-            absolute("libsecp256k1/configure"),
-            "--disable-shared",
-            "--disable-benchmark",
-            "--disable-tests",
-            "--enable-static",
-            "--disable-dependency-tracking",
-            "--with-pic",
-            "--enable-module-recovery",
-            "--prefix",
-            os.path.abspath(self.build_clib),
+            "cmake",
+            "-S",
+            absolute("libsecp256k1"),
+            "-B",
+            absolute("libsecp256k1/build"),
+            "-DBUILD_SHARED_LIBS=0",
+            "-DCMAKE_POSITION_INDEPENDENT_CODE=1",
+            "-DSECP256K1_BUILD_BENCHMARK=0",
+            "-DSECP256K1_BUILD_TESTS=0",
+            "-DSECP256K1_BUILD_EXHAUSTIVE_TESTS=0",
+            "-DSECP256K1_BUILD_CTIME_TESTS=0",
+            "-DSECP256K1_ENABLE_MODULE_RECOVERY=1",
         ]
 
         if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
             log.info("Building experimental")
             cmd.extend([
-                "--enable-experimental",
-                "--enable-module-ecdh",
-                "--enable-module-schnorrsig",
-                "--enable-module-extrakeys",
+                "-DSECP256K1_EXPERIMENTAL=1",
+                "-DSECP256K1_ENABLE_MODULE_ECDH=1",
+                "-DSECP256K1_ENABLE_MODULE_SCHNORRSIG=1",
+                "-DSECP256K1_ENABLE_MODULE_EXTRAKEYS=1",
             ])
 
-        with tempfile.TemporaryDirectory() as build_temp:
-            log.debug("Running configure: {}".format(" ".join(cmd)))
-            subprocess.check_call(
-                cmd,
-                cwd=build_temp,
-            )
+        log.debug("Running Cmake: {}".format(" ".join(cmd)))
+        subprocess.check_call(cmd)
+        subprocess.check_call(
+            [
+                "cmake",
+                "--build",
+                absolute("libsecp256k1/build"),
+                "--config",
+                "Release",
+            ],
+        )
 
-            subprocess.check_call(["make"], cwd=build_temp)
-            subprocess.check_call(["make", "install"], cwd=build_temp)
-
-        self.build_flags['include_dirs'].extend(build_flags('libsecp256k1',
-                                                            'I',
-                                                            self.build_clib))
-        self.build_flags['library_dirs'].extend(build_flags('libsecp256k1',
-                                                            'L',
-                                                            self.build_clib))
+        self.build_flags['include_dirs'].append(
+            absolute("libsecp256k1/include")
+        )
+        self.build_flags['library_dirs'].extend([
+            # On Linux
+            absolute("libsecp256k1/build/lib"),
+            # On Windows
+            absolute("libsecp256k1/build/lib/Release"),
+        ])
         if not has_system_lib():
             self.build_flags['define'].append(('CFFI_ENABLE_RECOVERY', None))
-        else:
-            pass
 
 
 class build_ext(_build_ext):
