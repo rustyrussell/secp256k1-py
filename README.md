@@ -206,7 +206,7 @@ The `ECDSA` class is intended to be used as a mix in. Its methods can be accesse
 - `ecdsa_serialize(raw_sig)` -> bytes<br/>
 convert the result from `ecdsa_sign` to DER.
 
-- `ecdsa_deserialie(ser_sig)` -> internal object<br/>
+- `ecdsa_deserialize(ser_sig)` -> internal object<br/>
 convert DER bytes to an internal object.
 
 - `ecdsa_serialize_compact(raw_sig)` -> bytes<br/>
