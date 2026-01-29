@@ -16,7 +16,7 @@ build-frontend = "build"
 before-build = "pip install setuptools"
 
 # Test configuration
-test-requires = "pytest"
+test-requires = ["pytest", "setuptools"]
 test-command = "pytest {project}/tests -v"
 
 [tool.cibuildwheel.linux]
