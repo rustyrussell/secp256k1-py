@@ -17,6 +17,7 @@ jobs:
       matrix:
         os:
           - ubuntu-22.04
+          - ubuntu-22.04-arm    # Native ARM64 runner
           - macos-14
           - windows-2022
 
@@ -26,13 +27,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-
-      # Set up QEMU for Linux ARM64 emulation
-      - name: Set up QEMU
-        if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.23
