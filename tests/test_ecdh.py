@@ -19,4 +19,4 @@ def test_ecdh():
         p.ecdh([])
 
     res = p.ecdh(b'0' * 32)
-    assert type(res) == bytes
+    assert isinstance(res, bytes)

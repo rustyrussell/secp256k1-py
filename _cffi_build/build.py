@@ -100,6 +100,7 @@ if ffi is None:
 
     # We usually build all the experimental bits, since they're useful.
     if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
-        ffi = _mk_ffi(_base + list(_modules.values()), libraries=[library_name])
+        sources = _base + list(_modules.values())
+        ffi = _mk_ffi(sources, libraries=[library_name])
     else:
         ffi = _mk_ffi(_base + [_modules['recovery']], libraries=[library_name])

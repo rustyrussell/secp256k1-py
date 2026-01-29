@@ -7,7 +7,9 @@ import tempfile
 
 # ignore_cleanup_errors was added in Python 3.10
 if sys.version_info < (3, 10):
-    pytest.skip("ignore_cleanup_errors requires Python 3.10+", allow_module_level=True)
+    pytest.skip(
+        "ignore_cleanup_errors requires Python 3.10+", allow_module_level=True
+    )
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
