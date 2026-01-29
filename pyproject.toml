@@ -23,11 +23,8 @@ test-command = "pytest {project}/tests -v"
 # Clean build directory before building
 before-all = "rm -rf build .eggs"
 
-# Build for x86_64 and aarch64
-archs = ["x86_64", "aarch64"]
-
-# Skip tests on emulated architectures (too slow/flaky)
-test-skip = "*-manylinux_aarch64"
+# Build for native architecture (we use separate runners for x86_64 and aarch64)
+archs = ["native"]
 
 [tool.cibuildwheel.macos]
 # Clean build directory before building
