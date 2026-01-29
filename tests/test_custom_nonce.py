@@ -6,54 +6,60 @@ import sys
 import tempfile
 
 # ignore_cleanup_errors was added in Python 3.10
-if sys.version_info < (3, 10):
-    pytest.skip(
-        "ignore_cleanup_errors requires Python 3.10+", allow_module_level=True
-    )
+pytestmark = pytest.mark.skipif(
+    sys.version_info < (3, 10),
+    reason="ignore_cleanup_errors requires Python 3.10+"
+)
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-DATA = os.path.join(HERE, 'data')
+if sys.version_info >= (3, 10):
+    from cffi import FFI
 
-from cffi import FFI  # noqa: E402
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    DATA = os.path.join(HERE, 'data')
 
-ffi = FFI()
-ffi.cdef('static int nonce_function_rand(unsigned char *nonce32,'
-         'const unsigned char *msg32,const unsigned char *key32,'
-         'const unsigned char *algo16,void *data,unsigned int attempt);')
+    ffi = FFI()
+    ffi.cdef('static int nonce_function_rand(unsigned char *nonce32,'
+             'const unsigned char *msg32,const unsigned char *key32,'
+             'const unsigned char *algo16,void *data,unsigned int attempt);')
 
-# The most elementary conceivable nonce function, acting
-# as a passthrough: user provides random data which must be
-# a valid scalar nonce. This is not ideal,
-# since libsecp256k1 expects the nonce output from
-# this function to result in a valid sig (s!=0), and will
-# increment the counter ("attempt") and try again if it fails;
-# since we don't increment the counter here, that will not succeed.
-# Of course the likelihood of such an error is infinitesimal.
-# TLDR this is not intended to be used in real life; use
-# deterministic signatures.
-ffi.set_source("_noncefunc",
-               """
-static int nonce_function_rand(unsigned char *nonce32,
-const unsigned char *msg32,
-const unsigned char *key32,
-const unsigned char *algo16,
-void *data,
-unsigned int attempt)
-{
-memcpy(nonce32,data,32);
-return 1;
-}
-               """)
+    # The most elementary conceivable nonce function, acting
+    # as a passthrough: user provides random data which must be
+    # a valid scalar nonce. This is not ideal,
+    # since libsecp256k1 expects the nonce output from
+    # this function to result in a valid sig (s!=0), and will
+    # increment the counter ("attempt") and try again if it fails;
+    # since we don't increment the counter here, that will not succeed.
+    # Of course the likelihood of such an error is infinitesimal.
+    # TLDR this is not intended to be used in real life; use
+    # deterministic signatures.
+    ffi.set_source("_noncefunc",
+                   """
+    static int nonce_function_rand(unsigned char *nonce32,
+    const unsigned char *msg32,
+    const unsigned char *key32,
+    const unsigned char *algo16,
+    void *data,
+    unsigned int attempt)
+    {
+    memcpy(nonce32,data,32);
+    return 1;
+    }
+                   """)
 
-# XXX: ignore_cleanup_errors because deletion fails on Windows
-with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as build_temp:
-    ffi.compile(tmpdir=build_temp)
+    # XXX: ignore_cleanup_errors because deletion fails on Windows
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as build_temp:
+        ffi.compile(tmpdir=build_temp)
 
-    # Make sure we can find our nonce.
-    sys.path.append(build_temp)
+        # Make sure we can find our nonce.
+        sys.path.append(build_temp)
 
-    import _noncefunc  # noqa: E402
-    from _noncefunc import ffi  # noqa: E402
+        import _noncefunc
+        from _noncefunc import ffi
+else:
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    DATA = os.path.join(HERE, 'data')
+    _noncefunc = None
+    ffi = None
 
 
 def test_ecdsa_with_custom_nonce():

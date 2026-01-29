@@ -161,6 +161,18 @@ class build_clib(_build_clib):
             "-DSECP256K1_ENABLE_MODULE_RECOVERY=1",
         ]
 
+        # Support macOS universal2 builds by setting CMAKE_OSX_ARCHITECTURES
+        # when ARCHFLAGS is set (typically by cibuildwheel)
+        archflags = os.environ.get('ARCHFLAGS', '')
+        if archflags:
+            archs = []
+            if '-arch x86_64' in archflags:
+                archs.append('x86_64')
+            if '-arch arm64' in archflags:
+                archs.append('arm64')
+            if archs:
+                cmd.append("-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs)))
+
         if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
             log.info("Building experimental")
             cmd.extend([
