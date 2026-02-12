@@ -27,7 +27,7 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        uv run flake8 . --count --show-source --statistics --exclude=libsecp256k1,.venv,.eggs,build
+        uv run flake8 . --count --show-source --statistics --exclude=libsecp256k1,_libsecp256k1,.venv,.eggs,build
 
     - name: Test with pytest
       run: |
