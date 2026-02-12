@@ -23,7 +23,7 @@ jobs:
 
     - name: Sync dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --no-editable
 
     - name: Lint with flake8
       run: |
