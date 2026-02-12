@@ -23,20 +23,11 @@ test-command = "pytest {project}/tests -v"
 # Clean build directory before building
 before-all = "rm -rf build .eggs"
 
-# Build for native architecture (we use separate runners for x86_64 and aarch64)
-archs = ["native"]
-
 [tool.cibuildwheel.macos]
 # Clean build directory before building
 before-all = "rm -rf build .eggs"
 
-# Build universal2 wheels (Intel + Apple Silicon)
-archs = ["universal2"]
-
 [tool.cibuildwheel.windows]
-# Build for 64-bit x86 and ARM64
-archs = ["AMD64", "ARM64"]
-
 # Skip tests on ARM64 (no ARM64 Python available on CI runners yet)
 test-skip = "*-win_arm64"
 
