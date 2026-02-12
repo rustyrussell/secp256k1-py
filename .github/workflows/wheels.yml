@@ -15,12 +15,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-22.04
-          - ubuntu-22.04-arm    # Native ARM64 runner
-          - macos-14
-          - windows-2022
-          - windows-11-arm      # Native Windows ARM64 runner
+        include:
+          - os: ubuntu-22.04
+            archs: x86_64
+          - os: ubuntu-22.04-arm
+            archs: aarch64
+          - os: macos-14
+            archs: universal2
+          - os: windows-2022
+            archs: AMD64
+          - os: windows-11-arm
+            archs: ARM64
 
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +38,8 @@ jobs:
         uses: pypa/cibuildwheel@v2.23
         with:
           output-dir: wheelhouse
+        env:
+          CIBW_ARCHS: ${{ matrix.archs }}
 
       - uses: actions/upload-artifact@v4
         with:
