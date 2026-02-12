@@ -18,7 +18,6 @@ maintainers = [
 keywords = ["secp256k1", "crypto", "elliptic curves", "bitcoin", "ethereum"]
 classifiers = [
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
