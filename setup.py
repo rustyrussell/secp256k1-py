@@ -228,7 +228,7 @@ with io.open('README.md', encoding='utf-8') as f:
 
 setup(
     name="secp256k1",
-    version="0.14.0",
+    version="0.14.1",
 
     description='FFI bindings to libsecp256k1',
     long_description=long_description,
