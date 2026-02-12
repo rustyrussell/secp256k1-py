@@ -171,7 +171,8 @@ class build_clib(_build_clib):
             if '-arch arm64' in archflags:
                 archs.append('arm64')
             if archs:
-                cmd.append("-DCMAKE_OSX_ARCHITECTURES={}".format(";".join(archs)))
+                arch_str = ";".join(archs)
+                cmd.append("-DCMAKE_OSX_ARCHITECTURES={}".format(arch_str))
 
         if not os.environ.get('SECP_BUNDLED_NO_EXPERIMENTAL'):
             log.info("Building experimental")
