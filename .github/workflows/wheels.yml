@@ -40,6 +40,27 @@ jobs:
           output-dir: wheelhouse
         env:
           CIBW_ARCHS: ${{ matrix.archs }}
+          
+          # Build for CPython 3.9-3.13
+          CIBW_BUILD: "cp39-* cp310-* cp311-* cp312-* cp313-*"
+          
+          # Skip PyPy and musllinux
+          CIBW_SKIP: "pp* *-musllinux*"
+          
+          # Use the `build` frontend
+          CIBW_BUILD_FRONTEND: "build"
+          
+          # Ensure setuptools is available (required by CFFI on Python 3.12+)
+          CIBW_BEFORE_BUILD: pip install setuptools
+          
+          # Linux: clean build directory
+          CIBW_BEFORE_ALL_LINUX: |
+            rm -rf build .eggs
+          
+          # macOS: Install automake and libtool via Homebrew
+          CIBW_BEFORE_ALL_MACOS: |
+            rm -rf build .eggs
+            brew install automake libtool
 
       - uses: actions/upload-artifact@v4
         with:
