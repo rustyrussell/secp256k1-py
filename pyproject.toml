@@ -34,8 +34,11 @@ before-all = "rm -rf build .eggs"
 archs = ["universal2"]
 
 [tool.cibuildwheel.windows]
-# Build for 64-bit only
-archs = ["AMD64"]
+# Build for 64-bit x86 and ARM64
+archs = ["AMD64", "ARM64"]
+
+# Skip tests on ARM64 (no ARM64 Python available on CI runners yet)
+test-skip = "*-win_arm64"
 
 # Clean build directory before building
 before-all = "if exist build rmdir /s /q build && if exist .eggs rmdir /s /q .eggs"
