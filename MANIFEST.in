@@ -1,3 +1,5 @@
 include setup_support.py
 recursive-include _cffi_build *.py *.h
-graft libsecp256k1
+recursive-include _libsecp256k1 *.c *.h *.md CMakeLists.txt *.cmake
+include _libsecp256k1/COPYING
+global-exclude .*

@@ -54,7 +54,7 @@ if [int(i) for i in setuptools_version.split('.')] < [3, 3]:
 def download_library(command):
     if command.dry_run:
         return
-    libdir = absolute("libsecp256k1")
+    libdir = absolute("_libsecp256k1")
     if os.path.exists(os.path.join(libdir, "CMakeLists.txt")):
         # Library already downloaded
         return
@@ -70,6 +70,14 @@ def download_library(command):
                     dirname = tf.getnames()[0].partition('/')[0]
                     tf.extractall()
                 shutil.move(dirname, libdir)
+                # Remove dotfiles that cause issues with setuptools absolute paths
+                for item in os.listdir(libdir):
+                    if item.startswith('.'):
+                        item_path = os.path.join(libdir, item)
+                        if os.path.isfile(item_path):
+                            os.remove(item_path)
+                        elif os.path.isdir(item_path):
+                            shutil.rmtree(item_path)
             else:
                 raise SystemExit(
                     "Unable to download secp256k1 library: HTTP-Status: %d",
@@ -82,9 +90,8 @@ def download_library(command):
 
 class egg_info(_egg_info):
     def run(self):
-        # Ensure library has been downloaded (sdist might have been skipped)
-        download_library(self)
-
+        # Don't download during egg_info - it causes setuptools to try to
+        # include the downloaded files with absolute paths
         _egg_info.run(self)
 
 
@@ -123,12 +130,13 @@ class build_clib(_build_clib):
             }
 
     def get_source_files(self):
-        # Ensure library has been downloaded (sdist might have been skipped)
-        download_library(self)
-
+        # Return relative paths to avoid setuptools absolute path error
+        libdir = "_libsecp256k1"
+        if not os.path.exists(libdir):
+            return []
         return [
-            absolute(os.path.join(root, filename))
-            for root, _, filenames in os.walk(absolute("libsecp256k1"))
+            os.path.join(root, filename)
+            for root, _, filenames in os.walk(libdir)
             for filename in filenames
         ]
 
@@ -149,9 +157,9 @@ class build_clib(_build_clib):
         cmd = [
             "cmake",
             "-S",
-            absolute("libsecp256k1"),
+            absolute("_libsecp256k1"),
             "-B",
-            absolute("libsecp256k1/build"),
+            absolute("_libsecp256k1/build"),
             "-DBUILD_SHARED_LIBS=0",
             "-DCMAKE_POSITION_INDEPENDENT_CODE=1",
             "-DSECP256K1_BUILD_BENCHMARK=0",
@@ -189,20 +197,20 @@ class build_clib(_build_clib):
             [
                 "cmake",
                 "--build",
-                absolute("libsecp256k1/build"),
+                absolute("_libsecp256k1/build"),
                 "--config",
                 "Release",
             ],
         )
 
         self.build_flags['include_dirs'].append(
-            absolute("libsecp256k1/include")
+            absolute("_libsecp256k1/include")
         )
         self.build_flags['library_dirs'].extend([
             # On Linux
-            absolute("libsecp256k1/build/lib"),
+            absolute("_libsecp256k1/build/lib"),
             # On Windows
-            absolute("libsecp256k1/build/lib/Release"),
+            absolute("_libsecp256k1/build/lib/Release"),
         ])
         if not has_system_lib():
             self.build_flags['define'].append(('CFFI_ENABLE_RECOVERY', None))
@@ -259,7 +267,7 @@ setup(
 
     packages=find_packages(exclude=('_cffi_build',
                                     '_cffi_build.*',
-                                    'libsecp256k1')),
+                                    '_libsecp256k1')),
     ext_package="secp256k1",
     cffi_modules=[
         "_cffi_build/build.py:ffi"
