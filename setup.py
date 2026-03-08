@@ -93,16 +93,6 @@ class sdist(_sdist):
         download_library(self)
         _sdist.run(self)
 
-
-if _bdist_wheel:
-    class bdist_wheel(_bdist_wheel):
-        def run(self):
-            download_library(self)
-            _bdist_wheel.run(self)
-else:
-    bdist_wheel = None
-
-
 class Distribution(_Distribution):
     def has_c_libraries(self):
         return not has_system_lib()
@@ -239,6 +229,21 @@ class develop(_develop):
 with io.open('README.md', encoding='utf-8') as f:
     long_description = f.read()
 
+cmdclass = {
+    'build_clib': build_clib,
+    'build_ext': build_ext,
+    'develop': develop,
+    'egg_info': egg_info,
+    'sdist': sdist,
+}
+
+if _bdist_wheel:
+    class bdist_wheel(_bdist_wheel):
+        def run(self):
+            download_library(self)
+            _bdist_wheel.run(self)
+    cmdclass['bdist_wheel'] = bdist_wheel
+
 setup(
     name="secp256k1",
     version="0.14.1",
@@ -265,14 +270,7 @@ setup(
         "_cffi_build/build.py:ffi"
     ],
 
-    cmdclass={
-        'build_clib': build_clib,
-        'build_ext': build_ext,
-        'develop': develop,
-        'egg_info': egg_info,
-        'sdist': sdist,
-        'bdist_wheel': bdist_wheel
-    },
+    cmdclass=cmdclass,
     distclass=Distribution,
     zip_safe=False,
 
