@@ -38,7 +38,7 @@ from setup_support import absolute, has_system_lib  # noqa: E402
 # Version of libsecp256k1 to download if none exists in the `libsecp256k1`
 # directory
 LIB_TARBALL_URL = ("https://github.com/bitcoin-core/secp256k1/archive/"
-                   "refs/tags/v0.6.0"
+                   "refs/tags/v0.7.1"
                    ".tar.gz")
 
 
